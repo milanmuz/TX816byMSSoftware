@@ -1,5 +1,5 @@
 # EDITOR TX816 v1.4 (1988) — Atari ST / GFA BASIC Reconstruction
-https://milanmuz.github.io/TX816byMSSoftware/
+Try it here: https://milanmuz.github.io/TX816byMSSoftware/
 
 A web-based reconstruction of **EDITOR TX816 v1.4**, originally developed in **1988** by **Marjan Šijanec** (MS Software) using **GFA BASIC 3** for **Atari ST** computers. 
 
