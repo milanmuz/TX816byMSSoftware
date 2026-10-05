@@ -38,7 +38,7 @@ This project is a faithful single-file HTML/JavaScript reconstruction based on a
 ---
 
 
-## 📂 Original Software Credits & Provenance
+## Original Software Credits & Provenance
 * **Author:** Marjan Šijanec (MS Software)
 * **Year:** 1988
 * **Original Platform:** Atari ST, GFA BASIC 3
@@ -47,5 +47,5 @@ This project is a faithful single-file HTML/JavaScript reconstruction based on a
 
 ---
 
-## 📜 License
+## License
 This historical reconstruction is shared for educational, archival, and preservation purposes, celebrating the legacy of early electronic music software development in the region.
