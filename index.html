@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EDITOR TX816 v1.4 - MS Software 1988 (reconstruction)</title>
+<style>
+html,body{margin:0;background:#9a9a9a;font:13px/1.25 "Courier New",monospace;color:#000;-webkit-user-select:none;user-select:none}
+#st{width:min(100%,900px);margin:8px auto;background:#fff;border:3px solid #000;min-height:560px;position:relative}
+#mb{display:flex;border-bottom:2px solid #000;background:#fff;position:relative;z-index:5}
+.mt{padding:2px 12px;cursor:default;position:relative}.mt.o{background:#000;color:#fff}
+.dd{display:none;position:absolute;left:0;top:100%;background:#fff;border:2px solid #000;box-shadow:3px 3px 0 #000;min-width:260px;color:#000}
+.mt.o .dd{display:block}.di{padding:1px 14px;white-space:nowrap}.di:hover{background:#000;color:#fff}.sep{border-top:1px dashed #000;margin:2px 0}
+.dim{color:#777}
+#scr{padding:6px 8px}
+.ttl{display:flex;justify-content:space-between;border-bottom:2px solid #000;margin-bottom:6px;font-weight:bold}
+.mods{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-bottom:6px}
+.m{border:2px solid #000;padding:2px 3px;cursor:pointer;overflow:hidden;white-space:nowrap}.m.s{background:#000;color:#fff}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:0 3px;text-align:center}
+td.l,th.l{text-align:left;width:92px}td.v{cursor:pointer;min-width:42px}td.v:hover,.m:hover{background:#000;color:#fff}
+.sc{overflow-x:auto}.cm{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:3px;margin-top:6px}
+.cm div{border:1px solid #000;display:flex;justify-content:space-between;padding:0 4px;cursor:pointer}.cm div:hover{background:#000;color:#fff}
+#stat{border-top:2px solid #000;padding:2px 8px;font-weight:bold}
+#info{border-top:1px solid #000;padding:2px 8px;font-size:11px}
+#log{height:70px;overflow:auto;border-top:1px solid #000;font-size:11px;padding:2px 8px;white-space:pre-wrap}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:9;display:flex;align-items:center;justify-content:center}
+.al{background:#fff;border:3px double #000;box-shadow:5px 5px 0 #000;padding:10px 14px;max-width:min(94vw,560px);display:grid;grid-template-columns:36px 1fr;gap:8px 12px}
+.ic{font:bold 28px serif;border:2px solid #000;text-align:center;height:34px;line-height:32px;border-radius:50%}
+.bt{grid-column:1/3;display:flex;gap:8px;justify-content:center}
+.bt button,.al input{font:inherit;background:#fff;color:#000;border:2px solid #000;padding:1px 14px;cursor:pointer}.bt button:hover{background:#000;color:#fff}
+.sel{font:inherit;background:#fff;border:1px solid #000}
+</style></head><body>
+<div id="st"><div id="mb"></div><div id="scr"></div>
+<div id="stat"></div><div id="log"></div>
+<div id="info">EDITOR TX816 v1.4 &middot; Marjan Sijanec &middot; MS Software 1988 &middot; GFA BASIC 3 / Atari ST &middot; Yamaha TX816 (8 x TF1) &middot; web reconstruction from a printout of the original listing</div></div>
+<script>
+const $=s=>document.querySelector(s);
+const OPP=[["EG R1",99],["EG R2",99],["EG R3",99],["EG R4",99],["EG L1",99],["EG L2",99],["EG L3",99],["EG L4",99],["Brk pt",99],["Lft dpth",99],["Rgt dpth",99],["Lft crv",3],["Rgt crv",3],["Rate scl",7],["AMS",3],["Vel sns",7],["Out lvl",99],["Mode 0=rat",1],["Freq crs",31],["Freq fin",99],["Detune",14]];
+const GL=[["Pitch R1",99],["Pitch R2",99],["Pitch R3",99],["Pitch R4",99],["Pitch L1",99],["Pitch L2",99],["Pitch L3",99],["Pitch L4",99],["Algorithm",31],["Feedback",7],["Osc sync",1],["LFO speed",99],["LFO delay",99],["LFO PMD",99],["LFO AMD",99],["LFO sync",1],["LFO wave",5],["PMS",7],["Transpose",48]];
+function iv(){const d=new Uint8Array(155);for(let o=0;o<6;o++)d.set([99,99,99,99,99,99,99,0,39,0,0,0,0,0,0,0,o==5?99:0,0,1,0,7],o*21);d.set([99,99,99,99,50,50,50,50,0,0,1,35,0,0,0,1,0,3,24],126);d.set([...'INIT VOICE'].map(c=>c.charCodeAt(0)),145);return d}
+const mem=[...Array(8)].map((_,i)=>({d:iv(),ch:i}));let sel=0,view='voice',opmask=63,midi,outp,inp,auto=0;
+const nm=d=>String.fromCharCode(...d.slice(145,155)).replace(/[^\x20-\x7e]/g,' ');
+const chk=d=>{let s=0;for(const x of d)s+=x;return(-s)&127};
+const stamp=()=>new Date().toLocaleString();
+function log(s){const l=$('#log');l.textContent+=s+"\n";l.scrollTop=1e9}
+// GEM-style alert and input boxes
+function box(lines,btns=['OK'],ic='!',inp){return new Promise(r=>{const o=document.createElement('div');o.className='ov';
+ o.innerHTML=`<div class="al"><div class="ic">${ic}</div><div>${lines.map(l=>`<div>${l}</div>`).join('')}${inp!=null?'<input id="ai" value="'+inp+'">':''}</div><div class="bt"></div></div>`;
+ btns.forEach((b,i)=>{const x=document.createElement('button');x.textContent=b;x.onclick=()=>{const v=inp!=null?o.querySelector('#ai').value:i;o.remove();r(inp!=null?(i?null:v):i)};o.querySelector('.bt').appendChild(x)});document.body.appendChild(o);const a=o.querySelector('#ai');if(a)a.focus()})}
+const ABOUT=()=>box(["<b>Program : EDITOR TX816</b>","by Marjan Sijanec","MS Software 1988, v1.4","","Voice &amp; performance editor for the Yamaha TX816 (eight TF1 modules, each a DX7 without panel), written in GFA BASIC 3 for the Atari ST, talking to the synth over MIDI.","Original menus: O programu / File / Edit / Save / Erase / Quit / Job options DB_TX816 / TF1.","Original files: c:\\ym_tx816\\ ... .vce (voices), .prf (performances), .rsc (screen graphics).","","This HTML version is a reconstruction from a scanned partial printout; the .rsc pictures and some TF1 MIDI bytes were not in the scan.","Dalje"],["Dalje"],'i');
+const NI=n=>box(["'"+n+"' exists in the original menu,","but its code or MIDI bytes are not legible/present","in the printout, so it is not reconstructed."],['Next'],'!');
+// MIDI
+const send=a=>{if(!outp)return log('No MIDI output selected (Job options / MIDI)'),0;outp.send(a);return 1};
+async function initMidi(){try{midi=await navigator.requestMIDIAccess({sysex:true});midi.onstatechange=pickMidi;pickMidi()}catch(e){log('Web MIDI/SysEx unavailable: '+e.message+' - use Chrome/Edge/Opera')}}
+function pickMidi(){outp=[...midi.outputs.values()][+(sessionStorage.mo||0)]||null;if(inp)inp.onmidimessage=null;inp=[...midi.inputs.values()][+(sessionStorage.mi||0)]||null;if(inp)inp.onmidimessage=onMsg;
+ stat('MIDI out: '+(outp?outp.name:'none')+'  in: '+(inp?inp.name:'none'))}
+async function chooseMidi(){if(!midi)return;const o=[...midi.outputs.values()],i=[...midi.inputs.values()];
+ const a=await box(['MIDI OUT port:',o.map((p,k)=>(k+1)+' '+p.name).join('<br>')||'(none)'],['OK','Cancel'],'?',+(sessionStorage.mo||0)+1);if(a!=null)sessionStorage.mo=Math.max(0,a-1);
+ const b=await box(['MIDI IN port:',i.map((p,k)=>(k+1)+' '+p.name).join('<br>')||'(none)'],['OK','Cancel'],'?',+(sessionStorage.mi||0)+1);if(b!=null)sessionStorage.mi=Math.max(0,b-1);pickMidi()}
+const dump=m=>[0xf0,0x43,mem[m].ch,0,1,0x1b,...mem[m].d,chk(mem[m].d),0xf7];
+function onMsg(e){const a=e.data;if(a[0]!==0xf0)return;if(a[1]===0x43&&(a[2]&240)===0&&a[3]===0&&a.length>=162){let m=mem.findIndex(x=>x.ch===(a[2]&15));if(m<0)m=sel;mem[m].d=Uint8Array.from(a.slice(6,161));log('Driver in: voice -> modul '+(m+1)+' '+nm(mem[m].d)+'  '+stamp());draw()}}
+const req=m=>send([0xf0,0x43,0x20|mem[m].ch,0,0xf7]);
+function par(p,v){const o=mem[sel].d[p];mem[sel].d[p]=v;send([0xf0,0x43,0x10|mem[sel].ch,p>>7,p&127,v,0xf7]);log(`Modul ${sel+1} par ${p}  Old = ${o}  New = ${v}  Vreme i datum upisa ${stamp()}`)}
+// screen
+function stat(s){$('#stat').textContent=s}
+const LM='Left mouse +    Right mouse -    (Shift = x10)';
+function cell(p,max,t,fn){t.onmousedown=e=>{e.preventDefault();const k=e.shiftKey?10:1;let v=mem[sel].d[p]+(e.button===2?-k:e.button===0?k:0);v=Math.max(0,Math.min(max,v));if(fn)fn(v);else par(p,v);t.textContent=v};t.oncontextmenu=e=>e.preventDefault()}
+function modStrip(){return`<div class="mods">${mem.map((m,i)=>`<div class="m ${i==sel?'s':''}" data-i="${i}">MODUL ${i+1}<br>ch ${m.ch+1}<br>${nm(m.d).trim()||'-'}</div>`).join('')}</div>`}
+function draw(){const s=$('#scr');
+ if(view==='voice'){s.innerHTML=`<div class="ttl"><span>EDIT VOICE - MODUL ${sel+1}</span><span class="nmb" style="cursor:pointer">NAME: [${nm(mem[sel].d)}]</span></div>${modStrip()}<div class="sc"><table id="ot"></table></div><div class="cm" id="cm"></div><div style="margin-top:4px">Operators: ${[6,5,4,3,2,1].map((o,i)=>`<label><input type="checkbox" data-o="${i}" ${opmask>>(5-i)&1?'checked':''}>OP${o}</label>`).join(' ')}</div>`;
+  const t=$('#ot');t.innerHTML='<tr><th class="l"></th>'+[6,5,4,3,2,1].map(o=>'<th>OP'+o+'</th>').join('')+'</tr>';
+  OPP.forEach(([l,m],i)=>{const r=t.insertRow();r.insertCell().outerHTML='<td class="l">'+l+'</td>';for(let o=0;o<6;o++){const c=r.insertCell(),p=o*21+i;c.className='v';c.textContent=mem[sel].d[p];cell(p,m,c)}});
+  const g=$('#cm');GL.forEach(([l,m],i)=>{const d=document.createElement('div');d.innerHTML=`<span>${l}</span><b>${mem[sel].d[126+i]}</b>`;cell(126+i,m,d,v=>{par(126+i,v);d.lastChild.textContent=v});g.appendChild(d)});
+  $('.nmb').onclick=async()=>{const v=await box(['Voice name (10 characters):'],['OK','Cancel'],'?',nm(mem[sel].d).trimEnd());if(v!=null){const q=v.padEnd(10).slice(0,10);for(let i=0;i<10;i++)mem[sel].d[145+i]=q.charCodeAt(i)&127;draw()}};
+  s.querySelectorAll('[data-o]').forEach(c=>c.onchange=()=>{opmask^=1<<(5-c.dataset.o);send([0xf0,0x43,0x10|mem[sel].ch,1,27,opmask,0xf7])});
+  stat(LM+'    Select TEST or SAVE parameter !')}
+ else if(view==='voices'||view==='list'){s.innerHTML=`<div class="ttl"><span>${view==='list'?'LIST VOICES &amp; PERFORMANCES':'EDIT VOICES'}</span></div>${modStrip()}<table><tr><th>Modul</th><th>MIDI ch</th><th>Voice</th><th>Algorithm</th></tr>${mem.map((m,i)=>`<tr><td>${i+1}</td><td>${m.ch+1}</td><td class="l">${nm(m.d)}</td><td>${m.d[134]}</td></tr>`).join('')}</table>`;stat('Left mouse select, right m. exit!')}
+ else{s.innerHTML=`<div class="ttl"><span>EDIT PERFORMANCE</span></div>${modStrip()}<table><tr><th>Modul</th><th>MIDI channel</th><th>Voice</th></tr>${mem.map((m,i)=>`<tr><td>${i+1}</td><td class="v" data-c="${i}">${m.ch+1}</td><td class="l">${nm(m.d)}</td></tr>`).join('')}</table>`;
+  s.querySelectorAll('[data-c]').forEach(c=>{c.onmousedown=e=>{e.preventDefault();const i=+c.dataset.c;mem[i].ch=(mem[i].ch+(e.button===2?15:1))%16;c.textContent=mem[i].ch+1};c.oncontextmenu=e=>e.preventDefault()});stat(LM+'    (channel)')}
+ s.querySelectorAll('.m').forEach(b=>{b.onclick=()=>{sel=+b.dataset.i;testNote();draw()};b.oncontextmenu=e=>{e.preventDefault()}})}
+function testNote(){const n=36+Math.floor(Math.random()*37),v=1+Math.floor(Math.random()*127),c=mem[sel].ch;if(outp){outp.send([0x90|c,n,v]);setTimeout(()=>outp.send([0x80|c,n,0]),600)}}
+// files
+function dl(n,d,t){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:t||'application/octet-stream'}));a.download=n;a.click()}
+const bank=()=>mem.map(m=>({ch:m.ch,d:[...m.d]}));
+function openF(cb){const f=document.createElement('input');f.type='file';f.onchange=async()=>{if(f.files[0])cb(f.files[0])};f.click()}
+const ask=async(t,def)=>{const v=await box([t],['OK','Cancel'],'?',def);return v==null?null:Math.max(0,Math.min(7,(+v||1)-1))};
+const act={
+ about:ABOUT,
+ disk:()=>openF(async f=>{if(f.name.match(/\.(json|prf)$/i)){try{JSON.parse(await f.text()).forEach((m,i)=>mem[i]={ch:m.ch,d:Uint8Array.from(m.d)});log('Loaded '+f.name)}catch{box(['Bad file'],['Next'])}}else{let b=new Uint8Array(await f.arrayBuffer());if(b[0]===0xf0&&b.length>=162)b=b.slice(6,161);if(b.length<155)return box(['File is not a voice.'],['Next']);mem[sel].d=b.slice(0,155);log('Voice '+f.name+' -> modul '+(sel+1))}draw()}),
+ ev:()=>{view='voice';draw()},evs:()=>{view='voices';draw()},ep:()=>{view='perf';draw()},
+ loadall:()=>act.disk(),
+ sv:()=>dl((nm(mem[sel].d).trim()||'voice')+'.vce',mem[sel].d),
+ svs:()=>dl('voices.vce',new Uint8Array(mem.flatMap(m=>[...m.d]))),
+ sp:()=>dl('perf.prf',JSON.stringify(bank()),'application/json'),
+ sall:()=>{act.sv();act.sp()},
+ ev1:async()=>{if(await box(['Erase voice of modul '+(sel+1)+' ?'],['Yes','No'],'?')===0){mem[sel].d=iv();draw()}},
+ ep1:async()=>{if(await box(['Erase performance (channels)?'],['Yes','No'],'?')===0){mem.forEach((m,i)=>m.ch=i);draw()}},
+ evp:async()=>{if(await box(['Erase voices & performance ?'],['Yes','No'],'?')===0){mem.forEach((m,i)=>{m.d=iv();m.ch=i});draw()}},
+ quit:async()=>{if(await box(['Quit ?'],['Yes','No'],'?')===0){document.body.innerHTML='<p style="padding:20px;background:#fff">Program ended.  Reload page to restart.</p>'}},
+ cv:async()=>{const t=await ask('Copy voice to modul no. (1-8):',(sel+1)%8+1);if(t!=null){mem[t].d=Uint8Array.from(mem[sel].d);draw()}},
+ cp:async()=>{const t=await ask('Copy performance (channel) to modul no. (1-8):',(sel+1)%8+1);if(t!=null){mem[t].ch=mem[sel].ch;draw()}},
+ cvp:async()=>{const t=await ask('Copy voice & performance to modul no. (1-8):',(sel+1)%8+1);if(t!=null){mem[t].d=Uint8Array.from(mem[sel].d);mem[t].ch=mem[sel].ch;draw()}},
+ scr:()=>{view='voice';draw()},prn:()=>window.print(),
+ auto:()=>{auto=!auto;box(['Time control & auto save: '+(auto?'ON (every 60 s, browser storage)':'OFF')],['OK']);},
+ din:()=>{req(sel);log('Driver in: dump voice requested, ch '+(mem[sel].ch+1))},
+ dall:async()=>{await box(['Please relax cca 20"'],['OK'],'i');mem.forEach((m,i)=>setTimeout(()=>req(i),i*800));log('Driver in: dump all requested')},
+ dack:()=>box(['Dump condition acknowledge:','MIDI in: '+(inp?inp.name:'none')],['Next'],'i'),
+ list:()=>{view='list';draw()},
+ sendv:()=>{if(send(dump(sel)))log('Driver out: voice -> modul '+(sel+1))},
+ sendall:()=>{mem.forEach((_,i)=>setTimeout(()=>send(dump(i)),i*300));log('Driver out: all voices & performance')},
+ opsel:()=>{view='voice';draw();box(['Operator select: use the OP1-OP6 check boxes under the parameter table.'],['Next'],'i')},
+ midi:chooseMidi
+};
+const NIV=n=>()=>NI(n);
+const MENU=[["Desk",[["O programu",'about']]],
+["File",[["File: Select disk",'disk'],["Load all voices & performances",'loadall']]],
+["Edit",[["Edit voice",'ev'],["Edit voices",'evs'],["Edit performance",'ep'],["Edit performances",'ep']]],
+["Save",[["Save voice",'sv'],["Save voices",'svs'],["Save performance",'sp'],["Save performances",'sp'],["Save all",'sall'],0,["Erase voice",'ev1'],["Erase voices",'evp'],["Erase performance",'ep1'],["Erase performances",'ep1'],["Erase voice & performance",'evp'],["Erase voices & performances",'evp'],0,["Quit",'quit']]],
+["Job options DB_TX816",[["Copy voice",'cv'],["Copy voices",null],["Copy performance",'cp'],["Copy performances",null],["Copy voice & performance",'cvp'],["Copy voices & performances",null],0,["Added intervals",null],0,["To screen",'scr'],["To printer",'prn'],["Time control & auto save",'auto'],0,["MIDI ports...",'midi']]],
+["Driver in",[["Dump voice",'din'],["Dump performance",'din'],["Dump condition acknowledge",'dack'],["Dump voice & performance",'din'],["Dump all voices & performances",'dall'],["List voices & performances",'list']]],
+["Driver out",[["Send current voice",'sendv'],["Send current performance",'sendv'],["Send voice & performance",'sendv'],["Send all voices & performances",'sendall']]],
+["TF1",[["TF1 memory protect OFF/ON",null],["TF1 midi IN individual",null],["TF1 midi IN common",null],["Operator select",'opsel'],["Source select",null],["Master tuning",null],["Note limit low",null],["Note limit high",null],["TF1 test program entry",null]]]];
+const mb=$('#mb');MENU.forEach(([t,items])=>{const m=document.createElement('div');m.className='mt';m.innerHTML=t+'<div class="dd"></div>';const dd=m.querySelector('.dd');
+ items.forEach(it=>{if(!it){dd.insertAdjacentHTML('beforeend','<div class="sep"></div>');return}const d=document.createElement('div');d.className='di'+(it[1]?'':' dim');d.textContent=it[0];d.onclick=e=>{e.stopPropagation();close();(it[1]?act[it[1]]:()=>NI(it[0]))()};dd.appendChild(d)});
+ m.onclick=()=>{const o=m.classList.contains('o');close();if(!o)m.classList.add('o')};mb.appendChild(m)});
+function close(){mb.querySelectorAll('.o').forEach(x=>x.classList.remove('o'))}document.addEventListener('click',e=>{if(!mb.contains(e.target))close()});
+setInterval(()=>{if(auto)try{localStorage.tx816=JSON.stringify(bank());log('Auto save '+stamp())}catch{}},60000);
+try{const s=JSON.parse(localStorage.tx816||'null');if(s)s.forEach((m,i)=>mem[i]={ch:m.ch,d:Uint8Array.from(m.d)})}catch{}
+draw();initMidi();ABOUT();log('Dim menu from original data: Desk File Edit Save/Erase Quit Job options DB_TX816 Driver in/out TF1');
+</script></body></html>
