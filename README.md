@@ -3,7 +3,7 @@ Try it here: https://milanmuz.github.io/TX816byMSSoftware/
 
 A web-based reconstruction of **EDITOR TX816 v1.4**, originally developed in **1988** by **Marjan Šijanec** (MS Software) using **GFA BASIC 3** for **Atari ST** computers. 
 
-This program was the first piece of software originally designed for professional use in the legendary **Electronic Studio of Radio Belgrade**—to control, program, and manage the **Yamaha TX816** synthesizer rack.
+This program was the first piece of software originally designed for professional use in the legendary **Electronic Studio Radio Belgrade**—to control, program, and manage the **Yamaha TX816** synthesizer rack.
 
 ---
 
