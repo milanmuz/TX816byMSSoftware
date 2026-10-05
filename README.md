@@ -5,6 +5,8 @@ A web-based reconstruction of **EDITOR TX816 v1.4**, originally developed in **1
 
 This program was the first piece of software originally designed for professional use in the legendary **Electronic Studio Radio Belgrade**—to control, program, and manage the **Yamaha TX816** synthesizer rack.
 
+Transcription and translation of code done with generous help of Claude AI.
+
 ---
 
 ## Historical Significance
